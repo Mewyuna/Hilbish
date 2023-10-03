@@ -268,7 +268,7 @@ func main() {
 	os.Mkdir("docs/api", 0777)
 	os.Mkdir("emmyLuaDocs", 0777)
 
-	dirs := []string{"./"}
+	dirs := []string{"./readline", "./"}
 	filepath.Walk("golibs/", func (path string, info os.FileInfo, err error) error {
 		if !info.IsDir() {
 			return nil
@@ -295,7 +295,7 @@ func main() {
 		pieces := []docPiece{}
 		typePieces := []docPiece{}
 		mod := l
-		if mod == "main" {
+		if mod == "main" || mod == "readline" {
 			mod = "hilbish"
 		}
 		var hasInterfaces bool
@@ -457,6 +457,9 @@ func main() {
 					htmlSig := typeTag.ReplaceAllStringFunc(strings.Replace(dps.FuncSig, "<", `\<`, -1), func(typ string) string {
 						typName := typ[1:]
 						typLookup := typeTable[strings.ToLower(typName)]
+						if len(typLookup) == 0 {
+							typLookup = []string{"WHAT", "WHAT"}
+						}
 						ifaces := typLookup[0] + "." + typLookup[1] + "/"
 						if typLookup[1] == "" {
 							ifaces = ""
