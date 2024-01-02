@@ -13,3 +13,7 @@ func (j *job) foreground() error {
 func (j *job) background() error {
 	return errors.New("not supported on windows")
 }
+
+func (j *job) suspend() error {
+	return errors.New("not supported on windows")
+}

@@ -268,6 +268,18 @@ func (j *jobHandler) add(cmd string, args []string, path string) *job {
 	return jb
 }
 
+func (j *jobHandler) addFromHandler(cmd string, handler *exec.Cmd) *job {
+	jb := j.add(cmd, handler.Args, handler.Path)
+	if ps := handler.ProcessState; ps != nil {
+		if !ps.Exited() && ps.Pid() != 0 {
+			jb.running = true
+		}
+	}
+	jb.setHandle(handler)
+
+	return jb
+}
+
 func (j *jobHandler) getLatest() *job {
 	j.mu.RLock()
 	defer j.mu.RUnlock()

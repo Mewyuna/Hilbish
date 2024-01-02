@@ -8,6 +8,7 @@ import (
 	"syscall"
 	
 	"golang.org/x/sys/unix"
+	rt "github.com/arnodel/golua/runtime"
 )
 
 func (j *job) foreground() error {
@@ -34,5 +35,16 @@ func (j *job) background() error {
 	}
 
 	proc.Signal(syscall.SIGCONT)
+	return nil
+}
+
+func (j *job) suspend() error {
+	proc := j.handle.Process
+	if proc == nil {
+		return nil
+	}
+
+	proc.Signal(syscall.SIGSTOP)
+	hooks.Emit("job.suspend", rt.UserDataValue(j.ud))
 	return nil
 }

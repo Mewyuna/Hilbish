@@ -48,6 +48,7 @@ var exports = map[string]util.LuaExport{
 	"interval": {hlinterval, 2, false},
 	"read": {hlread, 1, false},
 	"run": {hlrun, 1, true},
+	"suspend": {hlsuspend, 0, false},
 	"timeout": {hltimeout, 2, false},
 	"which": {hlwhich, 1, false},
 }
@@ -88,6 +89,12 @@ func hilbishLoad(rtm *rt.Runtime) (rt.Value, func()) {
 			hinter, err = c.ClosureArg(2)
 			if err != nil {
 				return nil, errors.New("hilbish.hinter has to be a function")
+			}
+		} else if k == "suspend" {
+			var err error
+			_, err = c.ClosureArg(2)
+			if err != nil {
+				return nil, errors.New("hilbish.suspend has to be a function")
 			}
 		} else if modVal := mod.Get(rt.StringValue(k)); modVal != rt.NilValue {
 			return nil, errors.New("not allowed to override in hilbish table")
@@ -218,7 +225,7 @@ func hlrun(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 	}
 
 	var exitcode uint8
-	stdout, stderr, err := execCommand(cmd, terminalOut)
+	stdout, stderr, err := execCommand(cmd, terminalOut, false)
 
 	if code, ok := interp.IsExitStatus(err); ok {
 		exitcode = code
@@ -751,5 +758,18 @@ func hlhinter(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 // #example
 // #param line string
 func hlhighlighter(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
+	return c.Next(), nil
+}
+
+// suspend()
+// Suspends the currently running process. This can (and should be) overwritten if a
+// a different runner is being used.
+// --- @param line string
+func hlsuspend(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
+	if currentHandle != nil || currentHandle.Process != nil {
+		j := jobs.addFromHandler(currentCmd, currentHandle)
+		j.suspend()
+	}
+
 	return c.Next(), nil
 }

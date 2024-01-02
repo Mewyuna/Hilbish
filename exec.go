@@ -27,6 +27,8 @@ import (
 var errNotExec = errors.New("not executable")
 var errNotFound = errors.New("not found")
 var runnerMode rt.Value = rt.StringValue("hybrid")
+var currentHandle *exec.Cmd
+var currentCmd string
 
 type execError struct{
 	typ string
@@ -236,7 +238,7 @@ func handleSh(cmdString string) (input string, exitCode uint8, cont bool, runErr
 }
 
 func execSh(cmdString string) (string, uint8, bool, error) {
-	_, _, err := execCommand(cmdString, true)
+	_, _, err := execCommand(cmdString, true, true)
 	if err != nil {
 		// If input is incomplete, start multiline prompting
 		if syntax.IsIncomplete(err) {
@@ -257,7 +259,7 @@ func execSh(cmdString string) (string, uint8, bool, error) {
 }
 
 // Run command in sh interpreter
-func execCommand(cmd string, terminalOut bool) (io.Writer, io.Writer, error) {
+func execCommand(cmd string, terminalOut, interactiveCall bool) (io.Writer, io.Writer, error) {
 	file, err := syntax.NewParser().Parse(strings.NewReader(cmd), "")
 	if err != nil {
 		return nil, nil, err
@@ -280,16 +282,21 @@ func execCommand(cmd string, terminalOut bool) (io.Writer, io.Writer, error) {
 	var bg bool
 	for _, stmt := range file.Stmts {
 		bg = false
+		printer.Print(buf, stmt.Cmd)
+
+		stmtStr := buf.String()
+		buf.Reset()
+
+		if interactiveCall {
+			currentCmd = stmtStr
+		}
+
 		if stmt.Background {
 			bg = true
-			printer.Print(buf, stmt.Cmd)
-
-			stmtStr := buf.String()
-			buf.Reset()
 			jobs.add(stmtStr, []string{}, "")
 		}
 
-		interp.ExecHandler(execHandle(bg))(runner)
+		interp.ExecHandler(execHandle(bg, interactiveCall))(runner)
 		err = runner.Run(context.TODO(), stmt)
 		if err != nil {
 			return stdout, stderr, err
@@ -299,7 +306,7 @@ func execCommand(cmd string, terminalOut bool) (io.Writer, io.Writer, error) {
 	return stdout, stderr, nil
 }
 
-func execHandle(bg bool) interp.ExecHandlerFunc {
+func execHandle(bg, interactiveCall bool) interp.ExecHandlerFunc {
 	return func(ctx context.Context, args []string) error {
 		_, argstring := splitInput(strings.Join(args, " "))
 		// i dont really like this but it works
@@ -413,6 +420,10 @@ func execHandle(bg bool) interp.ExecHandlerFunc {
 			Stderr: hc.Stderr,
 		}
 
+		if interactiveCall {
+			currentHandle = &cmd
+		}
+
 		var j *job
 		if bg {
 			j = jobs.getLatest()
@@ -422,6 +433,8 @@ func execHandle(bg bool) interp.ExecHandlerFunc {
 			err = cmd.Start()
 		}
 
+		execDone := make(chan struct{}, 1)
+		var suspended bool
 		if err == nil {
 			if done := ctx.Done(); done != nil {
 				go func() {
@@ -443,12 +456,31 @@ func execHandle(bg bool) interp.ExecHandlerFunc {
 				}()
 			}
 
-			err = cmd.Wait()
+			go func() {
+				hooks.On("job.suspend", func(args ...interface{}) {
+					fmt.Println("suspended")
+					val := args[0].(rt.Value)
+
+					_, ok := valueToJob(val)
+					if !ok {
+						return
+					}
+
+					suspended = true
+					execDone <- struct{}{}
+				})
+			}()
+			go func() {
+				err = cmd.Wait()
+				execDone <- struct{}{}
+			}()
+
+			<-execDone
 		}
 
 		exit := handleExecErr(err)
 
-		if bg {
+		if bg && !suspended {
 			j.exitCode = int(exit)
 			j.finish()
 		}
