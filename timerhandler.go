@@ -5,7 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"hilbish/util"
+	"hilbish/moonlight"
+	//"hilbish/util"
 	
 	rt "github.com/arnodel/golua/runtime"
 )
@@ -47,7 +48,7 @@ func (th *timersModule) create(typ timerType, dur time.Duration, fun *rt.Closure
 		th: th,
 		id: th.latestID,
 	}
-	t.ud = timerUserData(t)
+	//t.ud = timerUserData(t)
 
 	th.timers[th.latestID] = t
 	
@@ -133,14 +134,17 @@ t:start()
 print(t.running) // true
 ```
 */
-func (th *timersModule) loader(rtm *rt.Runtime) *rt.Table {
-	timerMethods := rt.NewTable()
-	timerFuncs := map[string]util.LuaExport{
+func (th *timersModule) loader() *moonlight.Table {
+	timerMethods := moonlight.NewTable()
+	timerFuncs := map[string]moonlight.Export{
+		/*
 		"start": {timerStart, 1, false},
 		"stop": {timerStop, 1, false},
+		*/
 	}
-	util.SetExports(rtm, timerMethods, timerFuncs)
+	l.SetExports(timerMethods, timerFuncs)
 
+/*
 	timerMeta := rt.NewTable()
 	timerIndex := func(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 		ti, _ := timerArg(c, 0)
@@ -164,18 +168,21 @@ func (th *timersModule) loader(rtm *rt.Runtime) *rt.Table {
 	}
 
 	timerMeta.Set(rt.StringValue("__index"), rt.FunctionValue(rt.NewGoFunction(timerIndex, "__index", 2, false)))
-	l.SetRegistry(timerMetaKey, rt.TableValue(timerMeta))
+	l.UnderlyingRuntime().SetRegistry(timerMetaKey, rt.TableValue(timerMeta))
+*/
 
-	thExports := map[string]util.LuaExport{
+	thExports := map[string]moonlight.Export{
+		/*
 		"create": {th.luaCreate, 3, false},
 		"get": {th.luaGet, 1, false},
+		*/
 	}
 
-	luaTh := rt.NewTable()
-	util.SetExports(rtm, luaTh, thExports)
+	luaTh := moonlight.NewTable()
+	l.SetExports(luaTh, thExports)
 
-	util.SetField(rtm, luaTh, "INTERVAL", rt.IntValue(0))
-	util.SetField(rtm, luaTh, "TIMEOUT", rt.IntValue(1))
+	luaTh.SetField("INTERVAL", moonlight.IntValue(0))
+	luaTh.SetField("TIMEOUT", moonlight.IntValue(1))
 
 	return luaTh
 }
@@ -199,7 +206,9 @@ func valueToTimer(val rt.Value) (*timer, bool) {
 	return j, ok
 }
 
+/*
 func timerUserData(j *timer) *rt.UserData {
-	timerMeta := l.Registry(timerMetaKey)
+	timerMeta := l.UnderlyingRuntime().Registry(timerMetaKey)
 	return rt.NewUserData(j, timerMeta.AsTable())
 }
+*/

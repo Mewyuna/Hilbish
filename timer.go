@@ -2,9 +2,11 @@ package main
 
 import (
 	"errors"
-	"fmt"
-	"os"
+//	"fmt"
+//	"os"
 	"time"
+
+//	"hilbish/moonlight"
 
 	rt "github.com/arnodel/golua/runtime"
 )
@@ -47,7 +49,8 @@ func (t *timer) start() error {
 		for {
 			select {
 			case <-t.ticker.C:
-				_, err := rt.Call1(l.MainThread(), rt.FunctionValue(t.fun))
+				/*
+				_, err := l.Call1(moonlight.FunctionValue(t.fun))
 				if err != nil {
 					fmt.Fprintln(os.Stderr, "Error in function:\n", err)
 					t.stop()
@@ -56,6 +59,7 @@ func (t *timer) start() error {
 				if t.typ == timerTimeout {
 					t.stop()
 				}
+				*/
 			case <-t.channel:
 				t.ticker.Stop()
 				return

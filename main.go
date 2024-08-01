@@ -16,6 +16,7 @@ import (
 	"hilbish/util"
 	"hilbish/golibs/bait"
 	"hilbish/golibs/commander"
+	"hilbish/moonlight"
 
 	rt "github.com/arnodel/golua/runtime"
 	"github.com/pborman/getopt"
@@ -25,7 +26,7 @@ import (
 )
 
 var (
-	l *rt.Runtime
+	l *moonlight.Runtime
 	lr *lineReader
 
 	luaCompletions = map[string]*rt.Closure{}
@@ -169,13 +170,13 @@ func main() {
 	}
 
 	if getopt.NArgs() > 0 {
-		luaArgs := rt.NewTable()
+		luaArgs := moonlight.NewTable()
 		for i, arg := range getopt.Args() {
-			luaArgs.Set(rt.IntValue(int64(i)), rt.StringValue(arg))
+			luaArgs.Set(moonlight.IntValue(int64(i)), moonlight.StringValue(arg))
 		}
 
-		l.GlobalEnv().Set(rt.StringValue("args"), rt.TableValue(luaArgs))
-		err := util.DoFile(l, getopt.Arg(0))
+		l.GlobalTable().SetField("args", moonlight.TableValue(luaArgs))
+		err := l.DoFile(getopt.Arg(0))
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			exit(1)

@@ -1,9 +1,7 @@
 package main
 
 import (
-	"hilbish/util"
-
-	rt "github.com/arnodel/golua/runtime"
+	"hilbish/moonlight"
 )
 
 // #interface runner
@@ -49,15 +47,15 @@ hilbish.runnerMode(function(input)
 end)
 ```
 */
-func runnerModeLoader(rtm *rt.Runtime) *rt.Table {
-	exports := map[string]util.LuaExport{
+func runnerModeLoader(rtm *moonlight.Runtime) *moonlight.Table {
+	exports := map[string]moonlight.Export{
 		"sh": {shRunner, 1, false},
 		"lua": {luaRunner, 1, false},
 		"setMode": {hlrunnerMode, 1, false},
 	}
 
-	mod := rt.NewTable()
-	util.SetExports(rtm, mod, exports)
+	mod := moonlight.NewTable()
+	rtm.SetExports(mod, exports)
 
 	return mod
 }
@@ -76,27 +74,27 @@ func _runnerMode() {}
 // Runs a command in Hilbish's shell script interpreter.
 // This is the equivalent of using `source`.
 // #param cmd string
-func shRunner(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
-	if err := c.Check1Arg(); err != nil {
+func shRunner(mlr *moonlight.Runtime, c *moonlight.GoCont) (moonlight.Cont, error) {
+	if err := mlr.Check1Arg(c); err != nil {
 		return nil, err
 	}
-	cmd, err := c.StringArg(0)
+	cmd, err := mlr.StringArg(c, 0)
 	if err != nil {
 		return nil, err
 	}
 
 	_, exitCode, cont, err := execSh(aliases.Resolve(cmd))
-	var luaErr rt.Value = rt.NilValue
+	var luaErr moonlight.Value = moonlight.NilValue
 	if err != nil {
-		luaErr = rt.StringValue(err.Error())
+		luaErr = moonlight.StringValue(err.Error())
 	}
-	runnerRet := rt.NewTable()
-	runnerRet.Set(rt.StringValue("input"), rt.StringValue(cmd))
-	runnerRet.Set(rt.StringValue("exitCode"), rt.IntValue(int64(exitCode)))
-	runnerRet.Set(rt.StringValue("continue"), rt.BoolValue(cont))
-	runnerRet.Set(rt.StringValue("err"), luaErr)
+	runnerRet := moonlight.NewTable()
+	runnerRet.SetField("input", moonlight.StringValue(cmd))
+	runnerRet.SetField("exitCode", moonlight.IntValue(int64(exitCode)))
+	runnerRet.SetField("continue", moonlight.BoolValue(cont))
+	runnerRet.SetField("err", luaErr)
 
-	return c.PushingNext(t.Runtime, rt.TableValue(runnerRet)), nil
+	return mlr.PushNext1(c, moonlight.TableValue(runnerRet)), nil
 }
 
 // #interface runner
@@ -104,24 +102,25 @@ func shRunner(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 // Evaluates `cmd` as Lua input. This is the same as using `dofile`
 // or `load`, but is appropriated for the runner interface.
 // #param cmd string
-func luaRunner(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
-	if err := c.Check1Arg(); err != nil {
+func luaRunner(mlr *moonlight.Runtime, c *moonlight.GoCont) (moonlight.Cont, error) {
+	if err := mlr.Check1Arg(c); err != nil {
 		return nil, err
 	}
-	cmd, err := c.StringArg(0)
+	cmd, err := mlr.StringArg(c, 0)
 	if err != nil {
 		return nil, err
 	}
 
 	input, exitCode, err := handleLua(cmd)
-	var luaErr rt.Value = rt.NilValue
+	var luaErr moonlight.Value = moonlight.NilValue
 	if err != nil {
-		luaErr = rt.StringValue(err.Error())
+		luaErr = moonlight.StringValue(err.Error())
 	}
-	runnerRet := rt.NewTable()
-	runnerRet.Set(rt.StringValue("input"), rt.StringValue(input))
-	runnerRet.Set(rt.StringValue("exitCode"), rt.IntValue(int64(exitCode)))
-	runnerRet.Set(rt.StringValue("err"), luaErr)
+	runnerRet := moonlight.NewTable()
+	runnerRet.SetField("input", moonlight.StringValue(input))
+	runnerRet.SetField("exitCode", moonlight.IntValue(int64(exitCode)))
+	runnerRet.SetField("err", luaErr)
 
-	return c.PushingNext(t.Runtime, rt.TableValue(runnerRet)), nil
+
+	return mlr.PushNext1(c, moonlight.TableValue(runnerRet)), nil
 }

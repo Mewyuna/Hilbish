@@ -10,10 +10,11 @@ on:
 
 jobs:
   build:
-    name: ${{ matrix.goos }}-${{ matrix.goarch }}
+    name: ${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.midnight == 'true' && ' (Midnight Edition)' || ''}}
     runs-on: ubuntu-latest
     strategy:
       matrix:
+        midnight: [false, true]
         goos: [linux, windows, darwin]
         goarch: ["386", amd64, arm64]
         exclude:
@@ -33,11 +34,11 @@ jobs:
       - name: Download Task
         run: 'sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d'
       - name: Build
-        run: GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} ./bin/task
+        run: GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} ./bin/task ${{ matrix.midnight == 'true' && 'midnight' || ''}}
       - uses: actions/upload-artifact@v4
         if: matrix.goos == 'windows'
         with:
-          name: hilbish-${{ matrix.goos }}-${{ matrix.goarch }}
+          name: hilbish${{ matrix.midnight == 'true' && '-midnight-edition' || ''}}-${{ matrix.goos }}-${{ matrix.goarch }}
           path: |
             hilbish.exe
             LICENSE
@@ -51,7 +52,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: matrix.goos != 'windows'
         with:
-          name: hilbish-${{ matrix.goos }}-${{ matrix.goarch }}
+          name: hilbish${{ matrix.midnight == 'true' && '-midnight-edition' || ''}}-${{ matrix.goos }}-${{ matrix.goarch }}
           path: |
             hilbish
             LICENSE

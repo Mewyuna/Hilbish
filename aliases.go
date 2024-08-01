@@ -97,10 +97,12 @@ func (a *aliasModule) Resolve(cmdstr string) string {
 func (a *aliasModule) Loader(rtm *rt.Runtime) *rt.Table {
 	// create a lua module with our functions
 	hshaliasesLua := map[string]util.LuaExport{
+		/*
 		"add": util.LuaExport{hlalias, 2, false},
 		"list": util.LuaExport{a.luaList, 0, false},
 		"del": util.LuaExport{a.luaDelete, 1, false},
 		"resolve": util.LuaExport{a.luaResolve, 1, false},
+		*/
 	}
 
 	mod := rt.NewTable()

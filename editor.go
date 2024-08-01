@@ -12,11 +12,13 @@ import (
 // directly interact with the line editor in use.
 func editorLoader(rtm *rt.Runtime) *rt.Table {
 	exports := map[string]util.LuaExport{
+		/*
 		"insert": {editorInsert, 1, false},
 		"setVimRegister": {editorSetRegister, 1, false},
 		"getVimRegister": {editorGetRegister, 2, false},
 		"getLine": {editorGetLine, 0, false},
 		"readChar": {editorReadChar, 0, false},
+		*/
 	}
 
 	mod := rt.NewTable()

@@ -1,14 +1,14 @@
 package main
 
 import (
-	"errors"
+	//"errors"
 	"path/filepath"
 	"strings"
 	"os"
 
 	"hilbish/util"
 
-	rt "github.com/arnodel/golua/runtime"
+	//rt "github.com/arnodel/golua/runtime"
 )
 
 var charEscapeMap = []string{
@@ -191,6 +191,7 @@ func escapeFilename(fname string) string {
 // #interface completion
 // tab completions
 // The completions interface deals with tab completions.
+/*
 func completionLoader(rtm *rt.Runtime) *rt.Table {
 	exports := map[string]util.LuaExport{
 		"bins": {hcmpBins, 3, false},
@@ -204,6 +205,7 @@ func completionLoader(rtm *rt.Runtime) *rt.Table {
 	
 	return mod
 }
+*/
 
 // #interface completion
 // bins(query, ctx, fields) -> entries (table), prefix (string)
@@ -231,6 +233,7 @@ hilbish.complete('command.sudo', function(query, ctx, fields)
 end)
 #example
 */
+/*
 func hcmpBins(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 	query, ctx, fds, err := getCompleteParams(t, c)
 	if err != nil {
@@ -246,6 +249,7 @@ func hcmpBins(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 
 	return c.PushingNext(t.Runtime, rt.TableValue(luaComps), rt.StringValue(pfx)), nil
 }
+*/
 
 // #interface completion
 // call(name, query, ctx, fields) -> completionGroups (table), prefix (string)
@@ -256,6 +260,7 @@ func hcmpBins(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 // #param query string
 // #param ctx string
 // #param fields table
+/*
 func hcmpCall(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 	if err := c.CheckNArgs(4); err != nil {
 		return nil, err
@@ -283,11 +288,15 @@ func hcmpCall(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 		return nil, errors.New("completer " + completer + " does not exist")
 	}
 
-	// we must keep the holy 80 cols
 	cont := c.Next()
-	err = rt.Call(l.MainThread(), rt.FunctionValue(completecb),
-	[]rt.Value{rt.StringValue(query), rt.StringValue(ctx), rt.TableValue(fields)},
-	cont)
+	err = l.Call(moonlight.FunctionValue(completecb), []moonlight.Value{
+		moonlight.StringValue(query),
+		moonlight.StringValue(ctx),
+		moonlight.TableValue(fields)
+	}, cont)
+	err = rt.Call(l.MainThread(), rt.FunctionValue(completecb), []rt.Value{
+		rt.StringValue(query), rt.StringValue(ctx), rt.TableValue(fields)
+	}, cont)
 
 	if err != nil {
 		return nil, err
@@ -295,6 +304,7 @@ func hcmpCall(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 
 	return cont, nil
 }
+*/
 
 // #interface completion
 // files(query, ctx, fields) -> entries (table), prefix (string)
@@ -303,6 +313,7 @@ func hcmpCall(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 // #param query string
 // #param ctx string
 // #param fields table
+/*
 func hcmpFiles(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 	query, ctx, fds, err := getCompleteParams(t, c)
 	if err != nil {
@@ -318,6 +329,7 @@ func hcmpFiles(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 
 	return c.PushingNext(t.Runtime, rt.TableValue(luaComps), rt.StringValue(pfx)), nil
 }
+*/
 
 // #interface completion
 // handler(line, pos)
@@ -340,10 +352,10 @@ function hilbish.completion.handler(line, pos)
 end
 #example
 */
+/*
 func hcmpHandler(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 	return c.Next(), nil
 }
-
 
 func getCompleteParams(t *rt.Thread, c *rt.GoCont) (string, string, []string, error) {
 	if err := c.CheckNArgs(3); err != nil {
@@ -371,3 +383,4 @@ func getCompleteParams(t *rt.Thread, c *rt.GoCont) (string, string, []string, er
 
 	return query, ctx, fds, err
 }
+*/

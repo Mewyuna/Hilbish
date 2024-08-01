@@ -10,6 +10,8 @@ vars:
   LIBDIR: '{{default .libdir__ .LIBDIR}}'
   goflags__: '-ldflags "-s -w -X main.dataDir={{.LIBDIR}}"'
   GOFLAGS: '{{default .goflags__ .GOFLAGS}}'
+  lua__: 'lua'
+  LUA: '{{default .lua__ .LUA}}'
 
 tasks:
   default:
@@ -21,6 +23,12 @@ tasks:
   default-nocgo:
     cmds:
       - CGO_ENABLED=0 go build {{.GOFLAGS}}
+    vars:
+      GOFLAGS: '-ldflags "-s -w -X main.dataDir={{.LIBDIR}} -X main.gitCommit=$(git rev-parse --short HEAD) -X main.gitBranch=$(git rev-parse --abbrev-ref HEAD)"'
+
+  midnight:
+    cmds:
+      - go build -tags midnight,{{.LUA}} {{.GOFLAGS}}
     vars:
       GOFLAGS: '-ldflags "-s -w -X main.dataDir={{.LIBDIR}} -X main.gitCommit=$(git rev-parse --short HEAD) -X main.gitBranch=$(git rev-parse --abbrev-ref HEAD)"'
 

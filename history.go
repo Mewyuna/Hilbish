@@ -7,17 +7,17 @@ import (
 	"path/filepath"
 	"strings"
 
-	rt "github.com/arnodel/golua/runtime"
+	"hilbish/moonlight"
 )
 
 type luaHistory struct {}
 
 func (h *luaHistory) Write(line string) (int, error) {
-	histWrite := hshMod.Get(rt.StringValue("history")).AsTable().Get(rt.StringValue("add"))
-	ln, err := rt.Call1(l.MainThread(), histWrite, rt.StringValue(line))
+	histWrite := hshMod.Get(moonlight.StringValue("history")).AsTable().Get(moonlight.StringValue("add"))
+	ln, err := l.Call1(histWrite, moonlight.StringValue(line))
 
 	var num int64
-	if ln.Type() == rt.IntType {
+	if ln.Type() == moonlight.IntType {
 		num = ln.AsInt()
 	}
 
@@ -25,11 +25,11 @@ func (h *luaHistory) Write(line string) (int, error) {
 }
 
 func (h *luaHistory) GetLine(idx int) (string, error) {
-	histGet := hshMod.Get(rt.StringValue("history")).AsTable().Get(rt.StringValue("get"))
-	lcmd, err := rt.Call1(l.MainThread(), histGet, rt.IntValue(int64(idx)))
+	histGet := hshMod.Get(moonlight.StringValue("history")).AsTable().Get(moonlight.StringValue("get"))
+	lcmd, err := l.Call1(histGet, moonlight.IntValue(int64(idx)))
 
 	var cmd string
-	if lcmd.Type() == rt.StringType {
+	if lcmd.Type() == moonlight.StringType {
 		cmd = lcmd.AsString()
 	}
 
@@ -37,11 +37,11 @@ func (h *luaHistory) GetLine(idx int) (string, error) {
 }
 
 func (h *luaHistory) Len() int {
-	histSize := hshMod.Get(rt.StringValue("history")).AsTable().Get(rt.StringValue("size"))
-	ln, _ := rt.Call1(l.MainThread(), histSize)
+	histSize := hshMod.Get(moonlight.StringValue("history")).AsTable().Get(moonlight.StringValue("size"))
+	ln, _ := l.Call1(histSize)
 
 	var num int64
-	if ln.Type() == rt.IntType {
+	if ln.Type() == moonlight.IntType {
 		num = ln.AsInt()
 	}
 

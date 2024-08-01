@@ -15,7 +15,8 @@ import (
 	"syscall"
 	"time"
 
-	"hilbish/util"
+	"hilbish/moonlight"
+	//"hilbish/util"
 
 	rt "github.com/arnodel/golua/runtime"
 	"mvdan.cc/sh/v3/shell"
@@ -27,7 +28,7 @@ import (
 
 var errNotExec = errors.New("not executable")
 var errNotFound = errors.New("not found")
-var runnerMode rt.Value = rt.StringValue("hybrid")
+var runnerMode moonlight.Value = moonlight.StringValue("hybrid")
 
 type streams struct {
 	stdout io.Writer
@@ -100,7 +101,7 @@ func runInput(input string, priv bool) {
 	var cont bool
 	// save incase it changes while prompting (For some reason)
 	currentRunner := runnerMode
-	if currentRunner.Type() == rt.StringType {
+	if currentRunner.Type() == moonlight.StringType {
 		switch currentRunner.AsString() {
 			case "hybrid":
 				_, _, err = handleLua(input)
@@ -170,70 +171,41 @@ func reprompt(input string) (string, error) {
 	}
 }
 
-func runLuaRunner(runr rt.Value, userInput string) (input string, exitCode uint8, continued bool, runnerErr, err error) {
-	term := rt.NewTerminationWith(l.MainThread().CurrentCont(), 3, false)
-	err = rt.Call(l.MainThread(), runr, []rt.Value{rt.StringValue(userInput)}, term)
+func runLuaRunner(runr moonlight.Value, userInput string) (input string, exitCode uint8, continued bool, runnerErr, err error) {
+	runnerRet, err := l.Call1(runr, moonlight.StringValue(userInput))
 	if err != nil {
 		return "", 124, false, nil, err
 	}
 
-	var runner *rt.Table
+	var runner *moonlight.Table
 	var ok bool
-	runnerRet := term.Get(0)
-	if runner, ok = runnerRet.TryTable(); !ok {
+	if runner, ok = moonlight.TryTable(runnerRet); !ok {
 		fmt.Fprintln(os.Stderr, "runner did not return a table")
 		exitCode = 125
 		input = userInput
 		return
 	}
 
-	if code, ok := runner.Get(rt.StringValue("exitCode")).TryInt(); ok {
+	if code, ok := runner.Get(moonlight.StringValue("exitCode")).TryInt(); ok {
 		exitCode = uint8(code)
 	}
 
-	if inp, ok := runner.Get(rt.StringValue("input")).TryString(); ok {
+	if inp, ok := runner.Get(moonlight.StringValue("input")).TryString(); ok {
 		input = inp
 	}
 
-	if errStr, ok := runner.Get(rt.StringValue("err")).TryString(); ok {
+	if errStr, ok := runner.Get(moonlight.StringValue("err")).TryString(); ok {
 		runnerErr = fmt.Errorf("%s", errStr)
 	}
 
-	if c, ok := runner.Get(rt.StringValue("continue")).TryBool(); ok {
+	if c, ok := runner.Get(moonlight.StringValue("continue")).TryBool(); ok {
 		continued = c
 	}
 	return
 }
 
-func handleLua(input string) (string, uint8, error) {
-	cmdString := aliases.Resolve(input)
-	// First try to load input, essentially compiling to bytecode
-	chunk, err := l.CompileAndLoadLuaChunk("", []byte(cmdString), rt.TableValue(l.GlobalEnv()))
-	if err != nil && noexecute {
-		fmt.Println(err)
-	/*	if lerr, ok := err.(*lua.ApiError); ok {
-			if perr, ok := lerr.Cause.(*parse.Error); ok {
-				print(perr.Pos.Line == parse.EOF)
-			}
-		}
-	*/
-		return cmdString, 125, err
-	}
-	// And if there's no syntax errors and -n isnt provided, run
-	if !noexecute {
-		if chunk != nil {
-			_, err = rt.Call1(l.MainThread(), rt.FunctionValue(chunk))
-		}
-	}
-	if err == nil {
-		return cmdString, 0, nil
-	}
-
-	return cmdString, 125, err
-}
-
 func handleSh(cmdString string) (input string, exitCode uint8, cont bool, runErr error) {
-	shRunner := hshMod.Get(rt.StringValue("runner")).AsTable().Get(rt.StringValue("sh"))
+	shRunner := hshMod.Get(moonlight.StringValue("runner")).AsTable().Get(moonlight.StringValue("sh"))
 	var err error
 	input, exitCode, cont, runErr, err = runLuaRunner(shRunner, cmdString)
 	if err != nil {
@@ -353,7 +325,7 @@ func execHandle(bg bool) interp.ExecHandlerFunc {
 			sinks.Set(rt.StringValue("out"), rt.UserDataValue(stdout.ud))
 			sinks.Set(rt.StringValue("err"), rt.UserDataValue(stderr.ud))
 
-			t := rt.NewThread(l)
+			//t := rt.NewThread(l)
 			sig := make(chan os.Signal)
 			exit := make(chan bool)
 
@@ -369,14 +341,15 @@ func execHandle(bg bool) interp.ExecHandlerFunc {
 				signal.Notify(sig, os.Interrupt)
 				select {
 					case <-sig:
-						t.KillContext()
+						//t.KillContext()
 						return
 				}
 
 			}()
 
 			go func() {
-				luaexitcode, err = rt.Call1(t, rt.FunctionValue(cmd), rt.TableValue(luacmdArgs), rt.TableValue(sinks))
+				// TODO: call in thread function?
+				//luaexitcode, err = l.CallInThread1(t, rt.FunctionValue(cmd), rt.TableValue(luacmdArgs), rt.TableValue(sinks))
 				exit <- true
 			}()
 
@@ -609,9 +582,9 @@ func splitInput(input string) ([]string, string) {
 }
 
 func cmdFinish(code uint8, cmdstr string, private bool) {
-	util.SetField(l, hshMod, "exitCode", rt.IntValue(int64(code)))
+	hshMod.SetField("exitCode", moonlight.IntValue(int64(code)))
 	// using AsValue (to convert to lua type) on an interface which is an int
 	// results in it being unknown in lua .... ????
 	// so we allow the hook handler to take lua runtime Values
-	hooks.Emit("command.exit", rt.IntValue(int64(code)), cmdstr, private)
+	hooks.Emit("command.exit", moonlight.IntValue(int64(code)), cmdstr, private)
 }

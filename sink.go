@@ -7,7 +7,8 @@ import (
 	"os"
 	"strings"
 
-	"hilbish/util"
+	//"hilbish/util"
+	"hilbish/moonlight"
 
 	rt "github.com/arnodel/golua/runtime"
 )
@@ -25,20 +26,22 @@ type sink struct{
 	autoFlush bool
 }
 
-func setupSinkType(rtm *rt.Runtime) {
-	sinkMeta := rt.NewTable()
+func setupSinkType() {
+	//sinkMeta := moonlight.NewTable()
 
-	sinkMethods := rt.NewTable()
-	sinkFuncs := map[string]util.LuaExport{
+	sinkMethods := moonlight.NewTable()
+	sinkFuncs := map[string]moonlight.Export{
+		/*
 		"flush": {luaSinkFlush, 1, false},
 		"read": {luaSinkRead, 1, false},
 		"readAll": {luaSinkReadAll, 1, false},
 		"autoFlush": {luaSinkAutoFlush, 2, false},
 		"write": {luaSinkWrite, 2, false},
 		"writeln": {luaSinkWriteln, 2, false},
+		*/
 	}
-	util.SetExports(l, sinkMethods, sinkFuncs)
-
+	l.SetExports(sinkMethods, sinkFuncs)
+/*
 	sinkIndex := func(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 		s, _ := sinkArg(c, 0)
 
@@ -65,6 +68,7 @@ func setupSinkType(rtm *rt.Runtime) {
 
 	sinkMeta.Set(rt.StringValue("__index"), rt.FunctionValue(rt.NewGoFunction(sinkIndex, "__index", 2, false)))
 	l.SetRegistry(sinkMetaKey, rt.TableValue(sinkMeta))
+*/
 }
 
 
@@ -216,7 +220,7 @@ func newSinkInput(r io.Reader) *sink {
 	s := &sink{
 		reader: bufio.NewReader(r),
 	}
-	s.ud = sinkUserData(s)
+	//s.ud = sinkUserData(s)
 
 	if f, ok := r.(*os.File); ok {
 		s.file = f
@@ -230,7 +234,7 @@ func newSinkOutput(w io.Writer) *sink {
 		writer: bufio.NewWriter(w),
 		autoFlush: true,
 	}
-	s.ud = sinkUserData(s)
+	//s.ud = sinkUserData(s)
 
 	return s
 }
@@ -254,7 +258,9 @@ func valueToSink(val rt.Value) (*sink, bool) {
 	return s, ok
 }
 
+/*
 func sinkUserData(s *sink) *rt.UserData {
-	sinkMeta := l.Registry(sinkMetaKey)
+	sinkMeta := l.UnderlyingRuntime().Registry(sinkMetaKey)
 	return rt.NewUserData(s, sinkMeta.AsTable())
 }
+*/

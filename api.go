@@ -15,56 +15,59 @@ package main
 import (
 	"bytes"
 	"errors"
-	"fmt"
+	//"fmt"
 	"io"
 	"os"
-	"os/exec"
+	//"os/exec"
 	"runtime"
 	"strings"
-	"syscall"
-	"time"
+	//"syscall"
+	//"time"
 
-	"hilbish/util"
+	//"hilbish/util"
+	"hilbish/moonlight"
 
 	rt "github.com/arnodel/golua/runtime"
-	"github.com/arnodel/golua/lib/packagelib"
+	//"github.com/arnodel/golua/lib/packagelib"
 	"github.com/arnodel/golua/lib/iolib"
 	"github.com/maxlandon/readline"
 	"mvdan.cc/sh/v3/interp"
 )
 
-var exports = map[string]util.LuaExport{
-	"alias": {hlalias, 2, false},
-	"appendPath": {hlappendPath, 1, false},
-	"complete": {hlcomplete, 2, false},
-	"cwd": {hlcwd, 0, false},
-	"exec": {hlexec, 1, false},
-	"runnerMode": {hlrunnerMode, 1, false},
-	"goro": {hlgoro, 1, true},
-	"highlighter": {hlhighlighter, 1, false},
-	"hinter": {hlhinter, 1, false},
-	"multiprompt": {hlmultiprompt, 1, false},
-	"prependPath": {hlprependPath, 1, false},
-	"prompt": {hlprompt, 1, true},
-	"inputMode": {hlinputMode, 1, false},
-	"interval": {hlinterval, 2, false},
-	"read": {hlread, 1, false},
-	"run": {hlrun, 1, true},
-	"timeout": {hltimeout, 2, false},
-	"which": {hlwhich, 1, false},
-}
+var hshMod *moonlight.Table
 
-var hshMod *rt.Table
-var hilbishLoader = packagelib.Loader{
-	Load: hilbishLoad,
-	Name: "hilbish",
-}
-
-func hilbishLoad(rtm *rt.Runtime) (rt.Value, func()) {
-	mod := rt.NewTable()
-
-	util.SetExports(rtm, mod, exports)
-	hshMod = mod
+func hilbishLoader(mlr *moonlight.Runtime) moonlight.Value {
+	println("hilbish loader called")
+	var exports = map[string]moonlight.Export{
+		"alias": {hlalias, 2, false},
+		"appendPath": {hlappendPath, 1, false},
+		/*
+		"complete": {hlcomplete, 2, false},
+		*/
+		"cwd": {hlcwd, 0, false},
+		/*
+		"exec": {hlexec, 1, false},
+		*/
+		"runnerMode": {hlrunnerMode, 1, false},
+		/*
+		"goro": {hlgoro, 1, true},
+		"highlighter": {hlhighlighter, 1, false},
+		"hinter": {hlhinter, 1, false},
+		"multiprompt": {hlmultiprompt, 1, false},
+		"prependPath": {hlprependPath, 1, false},
+		*/
+		"prompt": {hlprompt, 1, true},
+		/*
+		"inputMode": {hlinputMode, 1, false},
+		"interval": {hlinterval, 2, false},
+		"read": {hlread, 1, false},
+		"run": {hlrun, 1, true},
+		"timeout": {hltimeout, 2, false},
+		"which": {hlwhich, 1, false},
+		*/
+	}
+	hshMod = moonlight.NewTable()
+	mlr.SetExports(hshMod, exports)
 
 	host, _ := os.Hostname()
 	username := curuser.Username
@@ -73,68 +76,69 @@ func hilbishLoad(rtm *rt.Runtime) (rt.Value, func()) {
 		username = strings.Split(username, "\\")[1] // for some reason Username includes the hostname on windows
 	}
 
-	util.SetField(rtm, mod, "ver", rt.StringValue(getVersion()))
-	util.SetField(rtm, mod, "goVersion", rt.StringValue(runtime.Version()))
-	util.SetField(rtm, mod, "user", rt.StringValue(username))
-	util.SetField(rtm, mod, "host", rt.StringValue(host))
-	util.SetField(rtm, mod, "home", rt.StringValue(curuser.HomeDir))
-	util.SetField(rtm, mod, "dataDir", rt.StringValue(dataDir))
-	util.SetField(rtm, mod, "interactive", rt.BoolValue(interactive))
-	util.SetField(rtm, mod, "login", rt.BoolValue(login))
-	util.SetField(rtm, mod, "vimMode", rt.NilValue)
-	util.SetField(rtm, mod, "exitCode", rt.IntValue(0))
+	hshMod.SetField("ver", moonlight.StringValue(getVersion()))
+	hshMod.SetField("goVersion", moonlight.StringValue(runtime.Version()))
+	hshMod.SetField("user", moonlight.StringValue(username))
+	hshMod.SetField("host", moonlight.StringValue(host))
+	hshMod.SetField("home", moonlight.StringValue(curuser.HomeDir))
+	hshMod.SetField("dataDir", moonlight.StringValue(dataDir))
+	hshMod.SetField("interactive", moonlight.BoolValue(interactive))
+	hshMod.SetField("login", moonlight.BoolValue(login))
+	hshMod.SetField("exitCode", moonlight.IntValue(0))
+	//util.SetField(rtm, mod, "vimMode", rt.NilValue)
 
 	// hilbish.userDir table
-	hshuser := userDirLoader(rtm)
-	mod.Set(rt.StringValue("userDir"), rt.TableValue(hshuser))
+	hshuser := userDirLoader()
+	hshMod.SetField("userDir", moonlight.TableValue(hshuser))
 
 	// hilbish.os table
-	hshos := hshosLoader(rtm)
-	mod.Set(rt.StringValue("os"), rt.TableValue(hshos))
+	//hshos := hshosLoader(rtm)
+	//mod.Set(rt.StringValue("os"), rt.TableValue(hshos))
 
 	// hilbish.aliases table
 	aliases = newAliases()
-	aliasesModule := aliases.Loader(rtm)
-	mod.Set(rt.StringValue("aliases"), rt.TableValue(aliasesModule))
+	//aliasesModule := aliases.Loader(rtm)
+	//mod.Set(rt.StringValue("aliases"), rt.TableValue(aliasesModule))
 
 	// hilbish.history table
-	historyModule := lr.Loader(rtm)
-	mod.Set(rt.StringValue("history"), rt.TableValue(historyModule))
+	//historyModule := lr.Loader(rtm)
+	//mod.Set(rt.StringValue("history"), rt.TableValue(historyModule))
 
 	// hilbish.completion table
-	hshcomp := completionLoader(rtm)
+	//hshcomp := completionLoader(rtm)
 	// TODO: REMOVE "completion" AND ONLY USE "completions" WITH AN S
-	mod.Set(rt.StringValue("completion"), rt.TableValue(hshcomp))
-	mod.Set(rt.StringValue("completions"), rt.TableValue(hshcomp))
+	//mod.Set(rt.StringValue("completion"), rt.TableValue(hshcomp))
+	//mod.Set(rt.StringValue("completions"), rt.TableValue(hshcomp))
 
 	// hilbish.runner table
-	runnerModule := runnerModeLoader(rtm)
-	mod.Set(rt.StringValue("runner"), rt.TableValue(runnerModule))
+	runnerModule := runnerModeLoader(mlr)
+	hshMod.SetField("runner", moonlight.TableValue(runnerModule))
 
 	// hilbish.jobs table
 	jobs = newJobHandler()
-	jobModule := jobs.loader(rtm)
-	mod.Set(rt.StringValue("jobs"), rt.TableValue(jobModule))
+	//jobModule := jobs.loader(rtm)
+	//mod.Set(rt.StringValue("jobs"), rt.TableValue(jobModule))
 
 	// hilbish.timers table
 	timers = newTimersModule()
-	timersModule := timers.loader(rtm)
-	mod.Set(rt.StringValue("timers"), rt.TableValue(timersModule))
+	//timersModule := timers.loader(rtm)
+	//mod.Set(rt.StringValue("timers"), rt.TableValue(timersModule))
 
-	editorModule := editorLoader(rtm)
-	mod.Set(rt.StringValue("editor"), rt.TableValue(editorModule))
+	//editorModule := editorLoader(rtm)
+	//mod.Set(rt.StringValue("editor"), rt.TableValue(editorModule))
 
-	versionModule := rt.NewTable()
-	util.SetField(rtm, versionModule, "branch", rt.StringValue(gitBranch))
-	util.SetField(rtm, versionModule, "full", rt.StringValue(getVersion()))
-	util.SetField(rtm, versionModule, "commit", rt.StringValue(gitCommit))
-	util.SetField(rtm, versionModule, "release", rt.StringValue(releaseName))
-	mod.Set(rt.StringValue("version"), rt.TableValue(versionModule))
+	//versionModule := rt.NewTable()
+	//util.SetField(rtm, versionModule, "branch", rt.StringValue(gitBranch))
+	//util.SetField(rtm, versionModule, "full", rt.StringValue(getVersion()))
+	//util.SetField(rtm, versionModule, "commit", rt.StringValue(gitCommit))
+	//util.SetField(rtm, versionModule, "release", rt.StringValue(releaseName))
+	//mod.Set(rt.StringValue("version"), rt.TableValue(versionModule))
 
-	pluginModule := moduleLoader(rtm)
-	mod.Set(rt.StringValue("module"), rt.TableValue(pluginModule))
+	// very meta
+	moduleModule := moduleLoader(mlr)
+	hshMod.SetField("module", moonlight.TableValue(moduleModule))
 
-	return rt.TableValue(mod), nil
+	return moonlight.TableValue(hshMod)
 }
 
 func getenv(key, fallback string) string {
@@ -146,12 +150,12 @@ func getenv(key, fallback string) string {
 }
 
 func setVimMode(mode string) {
-	util.SetField(l, hshMod, "vimMode", rt.StringValue(mode))
+	hshMod.SetField("vimMode", moonlight.StringValue(mode))
 	hooks.Emit("hilbish.vimMode", mode)
 }
 
 func unsetVimMode() {
-	util.SetField(l, hshMod, "vimMode", rt.NilValue)
+	hshMod.SetField("vimMode", moonlight.NilValue)
 }
 
 func handleStream(v rt.Value, strms *streams, errStream bool) error {
@@ -292,10 +296,10 @@ func hlrun(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 // cwd() -> string
 // Returns the current directory of the shell.
 // #returns string
-func hlcwd(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
+func hlcwd(mlr *moonlight.Runtime, c *moonlight.GoCont) (moonlight.Cont, error) {
 	cwd, _ := os.Getwd()
 
-	return c.PushingNext1(t.Runtime, rt.StringValue(cwd)), nil
+	return mlr.PushNext1(c, moonlight.StringValue(cwd)), nil
 }
 
 
@@ -348,17 +352,18 @@ hilbish.prompt '%u@%h :%d $'
 -- prompt: user@hostname: ~/directory $
 #example
 */
-func hlprompt(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
-	err := c.Check1Arg()
+func hlprompt(mlr *moonlight.Runtime, c *moonlight.GoCont) (moonlight.Cont, error) {
+	err := mlr.Check1Arg(c)
 	if err != nil {
 		return nil, err
 	}
-	p, err := c.StringArg(0)
+	p, err := mlr.StringArg(c, 0)
 	if err != nil {
 		return nil, err
 	}
 	typ := "left"
 	// optional 2nd arg
+	/*
 	if len(c.Etc()) != 0 {
 		ltyp := c.Etc()[0]
 		var ok bool
@@ -367,6 +372,7 @@ func hlprompt(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 			return nil, errors.New("bad argument to run (expected string, got " + ltyp.TypeName() + ")")
 		}
 	}
+	*/
 
 	switch typ {
 		case "left":
@@ -429,15 +435,17 @@ hilbish.alias('dircount', 'ls %1 | wc -l')
 -- "dircount ~" would count how many files are in ~ (home directory).
 #example
 */
-func hlalias(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
-	if err := c.CheckNArgs(2); err != nil {
+//func hlalias(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
+func hlalias(mlr *moonlight.Runtime, c *moonlight.GoCont) (moonlight.Cont, error) {
+	if err := mlr.CheckNArgs(c, 2); err != nil {
 		return nil, err
 	}
-	cmd, err := c.StringArg(0)
+
+	cmd, err := mlr.StringArg(c, 0)
 	if err != nil {
 		return nil, err
 	}
-	orig, err := c.StringArg(1)
+	orig, err := mlr.StringArg(c, 1)
 	if err != nil {
 		return nil, err
 	}
@@ -462,20 +470,20 @@ hilbish.appendPath {
 }
 #example
 */
-func hlappendPath(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
-	if err := c.Check1Arg(); err != nil {
+func hlappendPath(mlr *moonlight.Runtime, c *moonlight.GoCont) (moonlight.Cont, error) {
+	if err := mlr.Check1Arg(c); err != nil {
 		return nil, err
 	}
-	arg := c.Arg(0)
+	arg := mlr.Arg(c, 0)
 
 	// check if dir is a table or a string
-	if arg.Type() == rt.TableType {
-		util.ForEach(arg.AsTable(), func(k rt.Value, v rt.Value) {
-			if v.Type() == rt.StringType {
-				appendPath(v.AsString())
+	if moonlight.Type(arg) == moonlight.TableType {
+		moonlight.ForEach(moonlight.ToTable(arg), func(_ moonlight.Value, v moonlight.Value) {
+			if moonlight.Type(v) == moonlight.StringType {
+				appendPath(moonlight.ToString(v))
 			}
 		})
-	} else if arg.Type() == rt.StringType {
+	} else if moonlight.Type(arg) == moonlight.StringType {
 		appendPath(arg.AsString())
 	} else {
 		return nil, errors.New("bad argument to appendPath (expected string or table, got " + arg.TypeName() + ")")
@@ -494,6 +502,7 @@ func appendPath(dir string) {
 	}
 }
 
+/*
 // exec(cmd)
 // Replaces the currently running Hilbish instance with the supplied command.
 // This can be used to do an in-place restart.
@@ -529,7 +538,9 @@ func hlexec(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 
 	return c.Next(), nil
 }
+*/
 
+/*
 // goro(fn)
 // Puts `fn` in a Goroutine.
 // This can be used to run any function in another thread at the same time as other Lua code.
@@ -613,6 +624,7 @@ func hlinterval(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 
 	return c.PushingNext1(t.Runtime, rt.UserDataValue(timer.ud)), nil
 }
+*/
 
 // complete(scope, cb)
 // Registers a completion handler for the specified scope.
@@ -648,7 +660,6 @@ hilbish.complete('command.sudo', function(query, ctx, fields)
 	return {compGroup}, pfx
 end)
 #example
-*/
 func hlcomplete(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 	scope, cb, err := util.HandleStrCallback(t, c)
 	if err != nil {
@@ -658,7 +669,9 @@ func hlcomplete(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 
 	return c.Next(), nil
 }
+*/
 
+/*
 // prependPath(dir)
 // Prepends `dir` to $PATH.
 // #param dir string
@@ -741,6 +754,7 @@ func hlinputMode(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 
 	return c.Next(), nil
 }
+*/
 
 // runnerMode(mode)
 // Sets the execution/runner mode for interactive Hilbish.
@@ -751,19 +765,19 @@ func hlinputMode(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 // will call it to execute user input instead.
 // Read [about runner mode](../features/runner-mode) for more information.
 // #param mode string|function
-func hlrunnerMode(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
-	if err := c.Check1Arg(); err != nil {
+func hlrunnerMode(mlr *moonlight.Runtime, c *moonlight.GoCont) (moonlight.Cont, error) {
+	if err := mlr.Check1Arg(c); err != nil {
 		return nil, err
 	}
-	mode := c.Arg(0)
+	mode := mlr.Arg(c, 0)
 
-	switch mode.Type() {
-		case rt.StringType:
+	switch moonlight.Type(mode) {
+		case moonlight.StringType:
 			switch mode.AsString() {
 				case "hybrid", "hybridRev", "lua", "sh": runnerMode = mode
 				default: return nil, errors.New("execMode: expected either a function or hybrid, hybridRev, lua, sh. Received " + mode.AsString())
 			}
-		case rt.FunctionType: runnerMode = mode
+		case moonlight.FunctionType: runnerMode = mode
 		default: return nil, errors.New("execMode: expected either a function or hybrid, hybridRev, lua, sh. Received " + mode.TypeName())
 	}
 
@@ -786,6 +800,7 @@ function hilbish.hinter(line, pos)
 end
 #example
 */
+/*
 func hlhinter(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 	return c.Next(), nil
 }
@@ -815,3 +830,4 @@ func hlhighlighter(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 
 	return c.PushingNext1(t.Runtime, rt.StringValue(line)), nil
 }
+*/

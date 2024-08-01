@@ -2,6 +2,8 @@ github.com/Rosettea/golua v0.0.0-20240427174124-d239074c1749 h1:jIFnWBTsYw8s7RX7
 github.com/Rosettea/golua v0.0.0-20240427174124-d239074c1749/go.mod h1:9jzpYPiU2is0HVGCiuIOBSXdergHUW44IEjmuN1UrIE=
 github.com/Rosettea/sh/v3 v3.4.0-0.dev.0.20240720131751-805c301321fd h1:THNle0FR2g7DMO1y3Bx1Zr7rYeiLXt3st3UkxEsMzL4=
 github.com/Rosettea/sh/v3 v3.4.0-0.dev.0.20240720131751-805c301321fd/go.mod h1:YZalN5H7WNQw3DGij6IvHsEhn5YMW7M2FCwG6gnfKy4=
+github.com/aarzilli/golua v0.0.0-20210507130708-11106aa57765 h1:N6gB4UCRBZz8twlJbMFiCKj0zX5Et2nFU/LRafT4x80=
+github.com/aarzilli/golua v0.0.0-20210507130708-11106aa57765/go.mod h1:hMjfaJVSqVnxenMlsxrq3Ni+vrm9Hs64tU4M7dhUoO4=
 github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d h1:licZJFw2RwpHMqeKTCYkitsPqHNxTmd4SNR5r94FGM8=
 github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d/go.mod h1:asat636LX7Bqt5lYEZ27JNDcqxfjdBQuJ/MM4CN/Lzo=
 github.com/arnodel/strftime v0.1.6 h1:0hc0pUvk8KhEMXE+htyaOUV42zNcf/csIbjzEFCJqsw=

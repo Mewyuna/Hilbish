@@ -5,6 +5,7 @@ go 1.21
 toolchain go1.22.2
 
 require (
+	github.com/aarzilli/golua v0.0.0-20210507130708-11106aa57765
 	github.com/arnodel/golua v0.0.0-20230215163904-e0b5347eaaa1
 	github.com/atsushinee/go-markdown-generator v0.0.0-20191121114853-83f9e1f68504
 	github.com/blackfireio/osinfo v1.0.5
