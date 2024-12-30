@@ -142,6 +142,10 @@ func (rl *Instance) viDeleteByAdjust(adjust int) {
 	rl.updateHelpers()
 }
 
+func (rl *Instance) DeleteByAmount(adjust int) {
+	rl.viDeleteByAdjust(adjust)
+}
+
 func (rl *Instance) vimDeleteToken(r rune) bool {
 	tokens, _, _ := tokeniseSplitSpaces(rl.line, 0)
 	pos := int(r) - 48 // convert ASCII to integer
