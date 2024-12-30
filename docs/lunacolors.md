@@ -18,7 +18,7 @@ In other usage, you may want to use a format string instead of having
 multiple nested functions for different styles. This is where the format
 function comes in. You can used named keywords to style a section of text.
 
-The list of arguments are:
+The list of arguments are:  
 Colors:
 - black
 - red
@@ -28,14 +28,17 @@ Colors:
 - magenta
 - cyan
 - white
+  
 Styles:
+- reset
 - bold
 - dim
 - italic
 - underline
 - invert
 
-For the colors, there are background and bright variants. The background
-color variants have a suffix of `Bg` and bright has a prefix of `bright`.
-Note that appropriate camel casing has to be applied to them. So bright
-blue would be `brightBlue` and background cyan would be `cyanBg`.
+For the colors, there are background and bright variants. Background color
+variants have a `Bg` suffix, while bright variants use the `bright` prefix.
+These can also be combined. Note that appropriate camel casing must be applied. 
+For example, bright blue would be written as `brightBlue`, a cyan background as 
+`cyanBg`, and combining them would result in `brightBlueBg`.

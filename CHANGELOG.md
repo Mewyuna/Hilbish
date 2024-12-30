@@ -3,6 +3,8 @@
 ## Unreleased
 ### Added
 - Forward/Right arrow key will fill in hint text (#327)
+### Changed
+- Documentation for Lunacolors has been improved, with more information added.
 
 ## [2.3.4] - 2024-12-28
 ### Fixed
