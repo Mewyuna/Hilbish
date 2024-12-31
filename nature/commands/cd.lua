@@ -3,8 +3,9 @@ local commander = require 'commander'
 local fs = require 'fs'
 local dirs = require 'nature.dirs'
 
-dirs.old = hilbish.cwd()
 commander.register('cd', function (args, sinks)
+	local oldPath = hilbish.cwd()
+
 	if #args > 1 then
 		sinks.out:writeln("cd: too many arguments")
 		return 1
@@ -16,13 +17,11 @@ commander.register('cd', function (args, sinks)
 		sinks.out:writeln(path)
 	end
 
-	dirs.setOld(hilbish.cwd())
-	dirs.push(path)
-
 	local ok, err = pcall(function() fs.cd(path) end)
 	if not ok then
 		sinks.out:writeln(err)
 		return 1
 	end
-	bait.throw('cd', path)
+	bait.throw('cd', path, oldPath)
+	bait.throw('hilbish.cd', fs.abs(path), oldPath)
 end)

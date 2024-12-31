@@ -56,8 +56,8 @@ func (j *job) start() error {
 		}
 		j.setHandle(&cmd)
 	}
-	// bgProcAttr is defined in execfile_<os>.go, it holds a procattr struct
-	// in a simple explanation, it makes signals from hilbish (sigint)
+	// bgProcAttr is defined in job_<os>.go, it holds a procattr struct
+	// in a simple explanation, it makes signals from hilbish (like sigint)
 	// not go to it (child process)
 	j.handle.SysProcAttr = bgProcAttr
 	// reset output buffers
@@ -136,7 +136,7 @@ func luaStartJob(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 
 	if !j.running {
 		err := j.start()
-		exit := handleExecErr(err)
+		exit := util.HandleExecErr(err)
 		j.exitCode = int(exit)
 		j.finish()
 	}

@@ -1,7 +1,8 @@
-package main
+package sink
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -17,15 +18,14 @@ var sinkMetaKey = rt.StringValue("hshsink")
 // #type
 // A sink is a structure that has input and/or output to/from
 // a desination.
-type sink struct{
-	writer *bufio.Writer
-	reader *bufio.Reader
+type Sink struct{
+	Rw *bufio.ReadWriter
 	file *os.File
-	ud *rt.UserData
+	UserData *rt.UserData
 	autoFlush bool
 }
 
-func setupSinkType(rtm *rt.Runtime) {
+func Loader(rtm *rt.Runtime) *rt.Table {
 	sinkMeta := rt.NewTable()
 
 	sinkMethods := rt.NewTable()
@@ -37,7 +37,7 @@ func setupSinkType(rtm *rt.Runtime) {
 		"write": {luaSinkWrite, 2, false},
 		"writeln": {luaSinkWriteln, 2, false},
 	}
-	util.SetExports(l, sinkMethods, sinkFuncs)
+	util.SetExports(rtm, sinkMethods, sinkFuncs)
 
 	sinkIndex := func(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 		s, _ := sinkArg(c, 0)
@@ -64,9 +64,24 @@ func setupSinkType(rtm *rt.Runtime) {
 	}
 
 	sinkMeta.Set(rt.StringValue("__index"), rt.FunctionValue(rt.NewGoFunction(sinkIndex, "__index", 2, false)))
-	l.SetRegistry(sinkMetaKey, rt.TableValue(sinkMeta))
+	rtm.SetRegistry(sinkMetaKey, rt.TableValue(sinkMeta))
+
+	exports := map[string]util.LuaExport{
+		"new": {luaSinkNew, 0, false},
+	}
+
+	mod := rt.NewTable()
+	util.SetExports(rtm, mod, exports)
+
+	return mod
 }
 
+
+func luaSinkNew(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
+	snk := NewSink(t.Runtime, new(bytes.Buffer))
+
+	return c.PushingNext1(t.Runtime, rt.UserDataValue(snk.UserData)), nil
+}
 
 // #member
 // readAll() -> string
@@ -84,7 +99,7 @@ func luaSinkReadAll(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 
 	lines := []string{}
 	for {
-		line, err := s.reader.ReadString('\n')
+		line, err := s.Rw.ReadString('\n')
 		if err != nil {
 			if err == io.EOF {
 				break
@@ -113,7 +128,7 @@ func luaSinkRead(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 		return nil, err
 	}
 
-	str, _ := s.reader.ReadString('\n')
+	str, _ := s.Rw.ReadString('\n')
 
 	return c.PushingNext1(t.Runtime, rt.StringValue(str)), nil
 }
@@ -135,9 +150,9 @@ func luaSinkWrite(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 		return nil, err
 	}
 
-	s.writer.Write([]byte(data))
+	s.Rw.Write([]byte(data))
 	if s.autoFlush {
-		s.writer.Flush()
+		s.Rw.Flush()
 	}
 
 	return c.Next(), nil
@@ -160,9 +175,9 @@ func luaSinkWriteln(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 		return nil, err
 	}
 
-	s.writer.Write([]byte(data + "\n"))
+	s.Rw.Write([]byte(data + "\n"))
 	if s.autoFlush {
-		s.writer.Flush()
+		s.Rw.Flush()
 	}
 
 	return c.Next(), nil
@@ -181,7 +196,7 @@ func luaSinkFlush(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 		return nil, err
 	}
 
-	s.writer.Flush()
+	s.Rw.Flush()
 
 	return c.Next(), nil
 }
@@ -212,11 +227,24 @@ func luaSinkAutoFlush(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 	return c.Next(), nil
 }
 
-func newSinkInput(r io.Reader) *sink {
-	s := &sink{
-		reader: bufio.NewReader(r),
+func NewSink(rtm *rt.Runtime, Rw io.ReadWriter) *Sink {
+	s := &Sink{
+		Rw: bufio.NewReadWriter(bufio.NewReader(Rw), bufio.NewWriter(Rw)),
 	}
-	s.ud = sinkUserData(s)
+	s.UserData = sinkUserData(rtm, s)
+
+	if f, ok := Rw.(*os.File); ok {
+		s.file = f
+	}
+
+	return s
+}
+
+func NewSinkInput(rtm *rt.Runtime, r io.Reader) *Sink {
+	s := &Sink{
+		Rw: bufio.NewReadWriter(bufio.NewReader(r), nil),
+	}
+	s.UserData = sinkUserData(rtm, s)
 
 	if f, ok := r.(*os.File); ok {
 		s.file = f
@@ -225,17 +253,17 @@ func newSinkInput(r io.Reader) *sink {
 	return s
 }
 
-func newSinkOutput(w io.Writer) *sink {
-	s := &sink{
-		writer: bufio.NewWriter(w),
+func NewSinkOutput(rtm *rt.Runtime, w io.Writer) *Sink {
+	s := &Sink{
+		Rw: bufio.NewReadWriter(nil, bufio.NewWriter(w)),
 		autoFlush: true,
 	}
-	s.ud = sinkUserData(s)
+	s.UserData = sinkUserData(rtm, s)
 
 	return s
 }
 
-func sinkArg(c *rt.GoCont, arg int) (*sink, error) {
+func sinkArg(c *rt.GoCont, arg int) (*Sink, error) {
 	s, ok := valueToSink(c.Arg(arg))
 	if !ok {
 		return nil, fmt.Errorf("#%d must be a sink", arg + 1)
@@ -244,17 +272,17 @@ func sinkArg(c *rt.GoCont, arg int) (*sink, error) {
 	return s, nil
 }
 
-func valueToSink(val rt.Value) (*sink, bool) {
+func valueToSink(val rt.Value) (*Sink, bool) {
 	u, ok := val.TryUserData()
 	if !ok {
 		return nil, false
 	}
 
-	s, ok := u.Value().(*sink)
+	s, ok := u.Value().(*Sink)
 	return s, ok
 }
 
-func sinkUserData(s *sink) *rt.UserData {
-	sinkMeta := l.Registry(sinkMetaKey)
+func sinkUserData(rtm *rt.Runtime, s *Sink) *rt.UserData {
+	sinkMeta := rtm.Registry(sinkMetaKey)
 	return rt.NewUserData(s, sinkMeta.AsTable())
 }

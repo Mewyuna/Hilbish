@@ -21,7 +21,6 @@ import (
 	"github.com/pborman/getopt"
 	"github.com/maxlandon/readline"
 	"golang.org/x/term"
-	"mvdan.cc/sh/v3/interp"
 )
 
 var (
@@ -38,11 +37,9 @@ var (
 	cmds *commander.Commander
 	defaultConfPath string
 	defaultHistPath string
-	runner *interp.Runner
 )
 
 func main() {
-	runner, _ = interp.New()
 	curuser, _ = user.Current()
 	homedir := curuser.HomeDir
 	confDir, _ = os.UserConfigDir()
@@ -311,15 +308,6 @@ func removeDupes(slice []string) []string {
 	}
 
 	return newSlice
-}
-
-func contains(s []string, e string) bool {
-	for _, a := range s {
-		if strings.ToLower(a) == strings.ToLower(e) {
-			return true
-		}
-	}
-	return false
 }
 
 func exit(code int) {

@@ -1,4 +1,5 @@
 -- @module dirs
+local bait = require 'bait'
 local fs = require 'fs'
 
 local dirs = {}
@@ -72,5 +73,10 @@ function dirs.setOld(d)
 	os.setenv('OLDPWD', d)
 	dirs.old = d
 end
+
+bait.catch('hilbish.cd', function(path, oldPath)
+	dirs.setOld(oldPath)
+	dirs.push(path)
+end)
 
 return dirs

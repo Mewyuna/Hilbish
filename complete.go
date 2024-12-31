@@ -98,7 +98,7 @@ func binaryComplete(query, ctx string, fields []string) ([]string, string) {
 			if len(fileCompletions) != 0 {
 				for _, f := range fileCompletions {
 					fullPath, _ := filepath.Abs(util.ExpandHome(query + strings.TrimPrefix(f, filePref)))
-					if err := findExecutable(escapeInvertReplaer.Replace(fullPath), false, true); err != nil {
+					if err := util.FindExecutable(escapeInvertReplaer.Replace(fullPath), false, true); err != nil {
 						continue
 					}
 					completions = append(completions, f)
@@ -115,7 +115,7 @@ func binaryComplete(query, ctx string, fields []string) ([]string, string) {
 			// get basename from matches
 			for _, match := range matches {
 				// check if we have execute permissions for our match
-				err := findExecutable(match, true, false)
+				err := util.FindExecutable(match, true, false)
 				if err != nil {
 					continue
 				}

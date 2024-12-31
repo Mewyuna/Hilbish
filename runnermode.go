@@ -53,7 +53,7 @@ end)
 */
 func runnerModeLoader(rtm *rt.Runtime) *rt.Table {
 	exports := map[string]util.LuaExport{
-		"sh": {shRunner, 1, false},
+		//"sh": {shRunner, 1, false},
 		"lua": {luaRunner, 1, false},
 		"setMode": {hlrunnerMode, 1, false},
 	}
@@ -66,10 +66,12 @@ func runnerModeLoader(rtm *rt.Runtime) *rt.Table {
 
 // #interface runner
 // setMode(cb)
+// **NOTE: This function is deprecated and will be removed in 3.0**
+// Use `hilbish.runner.setCurrent` instead.
 // This is the same as the `hilbish.runnerMode` function.
 // It takes a callback, which will be used to execute all interactive input.
 // In normal cases, neither callbacks should be overrided by the user,
-// as the higher level functions listed below this will handle it.
+// as the higher level functions (setCurrent) this will handle it.
 // #param cb function
 func _runnerMode() {}
 
@@ -78,6 +80,7 @@ func _runnerMode() {}
 // Runs a command in Hilbish's shell script interpreter.
 // This is the equivalent of using `source`.
 // #param cmd string
+/*
 func shRunner(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 	if err := c.Check1Arg(); err != nil {
 		return nil, err
@@ -101,6 +104,7 @@ func shRunner(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 
 	return c.PushingNext(t.Runtime, rt.TableValue(runnerRet)), nil
 }
+*/
 
 // #interface runner
 // lua(cmd)

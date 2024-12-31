@@ -8,6 +8,7 @@ import (
 	"hilbish/golibs/bait"
 	"hilbish/golibs/commander"
 	"hilbish/golibs/fs"
+	"hilbish/golibs/snail"
 	"hilbish/golibs/terminal"
 
 	rt "github.com/arnodel/golua/runtime"
@@ -23,16 +24,14 @@ func luaInit() {
 		MessageHandler: debuglib.Traceback,
 	})
 	lib.LoadAll(l)
-	setupSinkType(l)
 
 	lib.LoadLibs(l, hilbishLoader)
 	// yes this is stupid, i know
 	util.DoString(l, "hilbish = require 'hilbish'")
 
-	// Add fs and terminal module module to Lua
-	f := fs.New(runner)
-	lib.LoadLibs(l, f.Loader)
+	lib.LoadLibs(l, fs.Loader)
 	lib.LoadLibs(l, terminal.Loader)
+	lib.LoadLibs(l, snail.Loader)
 
 	cmds = commander.New(l)
 	lib.LoadLibs(l, cmds.Loader)

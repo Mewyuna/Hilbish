@@ -2,13 +2,77 @@ package util
 
 import (
 	"bufio"
+	"context"
+	"errors"
+	"fmt"
 	"io"
+	"path/filepath"
 	"strings"
 	"os"
+	"os/exec"
 	"os/user"
+	"runtime"
+	"syscall"
 
 	rt "github.com/arnodel/golua/runtime"
 )
+
+var ErrNotExec = errors.New("not executable")
+var ErrNotFound = errors.New("not found")
+
+type ExecError struct{
+	Typ string
+	Cmd string
+	Code int
+	Colon bool
+	Err error
+}
+
+func (e ExecError) Error() string {
+	return fmt.Sprintf("%s: %s", e.Cmd, e.Typ)
+}
+
+func (e ExecError) sprint() error {
+	sep := " "
+	if e.Colon {
+		sep = ": "
+	}
+
+	return fmt.Errorf("hilbish: %s%s%s", e.Cmd, sep, e.Err.Error())
+}
+
+func IsExecError(err error) (ExecError, bool) {
+	if exErr, ok := err.(ExecError); ok {
+		return exErr, true
+	}
+
+	fields := strings.Split(err.Error(), ": ")
+	knownTypes := []string{
+		"not-found",
+		"not-executable",
+	}
+
+	if len(fields) > 1 && Contains(knownTypes, fields[1]) {
+		var colon bool
+		var e error
+		switch fields[1] {
+			case "not-found":
+				e = ErrNotFound
+			case "not-executable":
+				colon = true
+				e = ErrNotExec
+		}
+
+		return ExecError{
+			Cmd: fields[0],
+			Typ: fields[1],
+			Colon: colon,
+			Err: e,
+		}, true
+	}
+
+	return ExecError{}, false
+}
 
 // SetField sets a field in a table, adding docs for it.
 // It is accessible via the __docProp metatable. It is a table of the names of the fields.
@@ -34,6 +98,15 @@ func DoString(rtm *rt.Runtime, code string) (rt.Value, error) {
 	}
 
 	return ret, err
+}
+
+func MustDoString(rtm *rt.Runtime, code string) rt.Value {
+	val, err := DoString(rtm, code)
+	if err != nil {
+		panic(err)
+	}
+
+	return val
 }
 
 // DoFile runs the contents of the file in the Lua runtime.
@@ -140,4 +213,68 @@ func AbbrevHome(path string) string {
 	}
 
 	return path
+}
+
+func LookPath(file string) (string, error) { // custom lookpath function so we know if a command is found *and* is executable
+	var skip []string
+	if runtime.GOOS == "windows" {
+		skip = []string{"./", "../", "~/", "C:"}
+	} else {
+		skip = []string{"./", "/", "../", "~/"}
+	}
+	for _, s := range skip {
+		if strings.HasPrefix(file, s) {
+			return file, FindExecutable(file, false, false)
+		}
+	}
+	for _, dir := range filepath.SplitList(os.Getenv("PATH")) {
+		path := filepath.Join(dir, file)
+		err := FindExecutable(path, true, false)
+		if err == ErrNotExec {
+			return "", err
+		} else if err == nil {
+			return path, nil
+		}
+	}
+
+	return "", os.ErrNotExist
+}
+
+func Contains(s []string, e string) bool {
+	for _, a := range s {
+		if strings.ToLower(a) == strings.ToLower(e) {
+			return true
+		}
+	}
+	return false
+}
+
+func HandleExecErr(err error) (exit uint8) {
+	ctx := context.TODO()
+
+	switch x := err.(type) {
+	case *exec.ExitError:
+		// started, but errored - default to 1 if OS
+		// doesn't have exit statuses
+		if status, ok := x.Sys().(syscall.WaitStatus); ok {
+			if status.Signaled() {
+				if ctx.Err() != nil {
+					return
+				}
+				exit = uint8(128 + status.Signal())
+				return
+			}
+			exit = uint8(status.ExitStatus())
+			return
+		}
+		exit = 1
+		return
+	case *exec.Error:
+		// did not start
+		//fmt.Fprintf(hc.Stderr, "%v\n", err)
+		exit = 127
+	default: return
+	}
+
+	return
 }

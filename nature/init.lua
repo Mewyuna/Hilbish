@@ -18,6 +18,8 @@ table.insert(package.searchers, function(module)
 	return function() return hilbish.module.load(path) end, path
 end)
 
+require 'nature.hilbish'
+
 require 'nature.commands'
 require 'nature.completions'
 require 'nature.opts'

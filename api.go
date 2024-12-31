@@ -13,10 +13,9 @@
 package main
 
 import (
-	"bytes"
+	//"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"runtime"
@@ -24,13 +23,14 @@ import (
 	"syscall"
 	"time"
 
+	"hilbish/sink"
 	"hilbish/util"
 
 	rt "github.com/arnodel/golua/runtime"
 	"github.com/arnodel/golua/lib/packagelib"
-	"github.com/arnodel/golua/lib/iolib"
+	//"github.com/arnodel/golua/lib/iolib"
 	"github.com/maxlandon/readline"
-	"mvdan.cc/sh/v3/interp"
+	//"mvdan.cc/sh/v3/interp"
 )
 
 var exports = map[string]util.LuaExport{
@@ -49,7 +49,6 @@ var exports = map[string]util.LuaExport{
 	"inputMode": {hlinputMode, 1, false},
 	"interval": {hlinterval, 2, false},
 	"read": {hlread, 1, false},
-	"run": {hlrun, 1, true},
 	"timeout": {hltimeout, 2, false},
 	"which": {hlwhich, 1, false},
 }
@@ -134,6 +133,9 @@ func hilbishLoad(rtm *rt.Runtime) (rt.Value, func()) {
 	pluginModule := moduleLoader(rtm)
 	mod.Set(rt.StringValue("module"), rt.TableValue(pluginModule))
 
+	sinkModule := sink.Loader(l)
+	mod.Set(rt.StringValue("sink"), rt.TableValue(sinkModule))
+
 	return rt.TableValue(mod), nil
 }
 
@@ -154,6 +156,7 @@ func unsetVimMode() {
 	util.SetField(l, hshMod, "vimMode", rt.NilValue)
 }
 
+/*
 func handleStream(v rt.Value, strms *streams, errStream bool) error {
 	ud, ok := v.TryUserData()
 	if !ok {
@@ -182,112 +185,7 @@ func handleStream(v rt.Value, strms *streams, errStream bool) error {
 
 	return nil
 }
-
-// run(cmd, streams) -> exitCode (number), stdout (string), stderr (string)
-// Runs `cmd` in Hilbish's shell script interpreter.
-// The `streams` parameter specifies the output and input streams the command should use.
-// For example, to write command output to a sink.
-// As a table, the caller can directly specify the standard output, error, and input
-// streams of the command with the table keys `out`, `err`, and `input` respectively.
-// As a boolean, it specifies whether the command should use standard output or return its output streams.
-// #param cmd string
-// #param streams table|boolean
-// #returns number, string, string
-// #example
-/*
-// This code is the same as `ls -l | wc -l`
-local fs = require 'fs'
-local pr, pw = fs.pipe()
-hilbish.run('ls -l', {
-	stdout = pw,
-	stderr = pw,
-})
-
-pw:close()
-
-hilbish.run('wc -l', {
-	stdin = pr
-})
 */
-// #example
-func hlrun(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
-	// TODO: ON BREAKING RELEASE, DO NOT ACCEPT `streams` AS A BOOLEAN.
-	if err := c.Check1Arg(); err != nil {
-		return nil, err
-	}
-	cmd, err := c.StringArg(0)
-	if err != nil {
-		return nil, err
-	}
-
-	strms := &streams{}
-	var terminalOut bool
-	if len(c.Etc()) != 0 {
-		tout := c.Etc()[0]
-
-		var ok bool
-		terminalOut, ok = tout.TryBool()
-		if !ok {
-			luastreams, ok := tout.TryTable()
-			if !ok {
-				return nil, errors.New("bad argument to run (expected boolean or table, got " + tout.TypeName() + ")")
-			}
-
-			handleStream(luastreams.Get(rt.StringValue("out")), strms, false)
-			handleStream(luastreams.Get(rt.StringValue("err")), strms, true)
-
-			stdinstrm := luastreams.Get(rt.StringValue("input"))
-			if !stdinstrm.IsNil() {
-				ud, ok := stdinstrm.TryUserData()
-				if !ok {
-					return nil, errors.New("bad type as run stdin stream (expected userdata as either sink or file, got " + stdinstrm.TypeName() + ")")
-				}
-
-				val := ud.Value()
-				var varstrm io.Reader
-				if f, ok := val.(*iolib.File); ok {
-					varstrm = f.Handle()
-				}
-
-				if f, ok := val.(*sink); ok {
-					varstrm = f.reader
-				}
-
-				if varstrm == nil {
-					return nil, errors.New("bad type as run stdin stream (expected userdata as either sink or file)")
-				}
-
-				strms.stdin = varstrm
-			}
-		} else {
-			if !terminalOut {
-				strms = &streams{
-					stdout: new(bytes.Buffer),
-					stderr: new(bytes.Buffer),
-				}
-			}
-		}
-	}
-
-	var exitcode uint8
-	stdout, stderr, err := execCommand(cmd, strms)
-
-	if code, ok := interp.IsExitStatus(err); ok {
-		exitcode = code
-	} else if err != nil {
-		exitcode = 1
-	}
-
-	var stdoutStr, stderrStr string
-	if stdoutBuf, ok := stdout.(*bytes.Buffer); ok {
-		stdoutStr = stdoutBuf.String()
-	}
-	if stderrBuf, ok := stderr.(*bytes.Buffer); ok {
-		stderrStr = stderrBuf.String()
-	}
-
-	return c.PushingNext(t.Runtime, rt.IntValue(int64(exitcode)), rt.StringValue(stdoutStr), rt.StringValue(stderrStr)), nil
-}
 
 // cwd() -> string
 // Returns the current directory of the shell.
@@ -508,7 +406,7 @@ func hlexec(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 	}
 	cmdArgs, _ := splitInput(cmd)
 	if runtime.GOOS != "windows" {
-		cmdPath, err := exec.LookPath(cmdArgs[0])
+		cmdPath, err := util.LookPath(cmdArgs[0])
 		if err != nil {
 			fmt.Println(err)
 			// if we get here, cmdPath will be nothing
@@ -706,7 +604,7 @@ func hlwhich(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 		return c.PushingNext1(t.Runtime, rt.StringValue(cmd)), nil
 	}
 
-	path, err := exec.LookPath(cmd)
+	path, err := util.LookPath(cmd)
 	if err != nil {
 		return c.Next(), nil
 	}
@@ -743,6 +641,8 @@ func hlinputMode(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 }
 
 // runnerMode(mode)
+// **NOTE: This function is deprecated and will be removed in 3.0**
+// Use `hilbish.runner.setCurrent` instead.
 // Sets the execution/runner mode for interactive Hilbish.
 // This determines whether Hilbish wll try to run input as Lua
 // and/or sh or only do one of either.
@@ -752,6 +652,7 @@ func hlinputMode(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 // Read [about runner mode](../features/runner-mode) for more information.
 // #param mode string|function
 func hlrunnerMode(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
+	// TODO: Reimplement in Lua
 	if err := c.Check1Arg(); err != nil {
 		return nil, err
 	}

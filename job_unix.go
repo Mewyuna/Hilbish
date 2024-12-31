@@ -10,6 +10,10 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+var bgProcAttr *syscall.SysProcAttr = &syscall.SysProcAttr{
+	Setpgid: true,
+}
+
 func (j *job) foreground() error {
 	if jobs.foreground {
 		return errors.New("(another) job already foregrounded")
