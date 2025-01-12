@@ -1,4 +1,4 @@
---- hilbish.runner
+-- @module hilbish.runner
 local currentRunner = 'hybrid'
 local runners = {}
 

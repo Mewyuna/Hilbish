@@ -1,3 +1,4 @@
+-- @module hilbish.messages
 local bait = require 'bait'
 local commander = require 'commander'
 local lunacolors = require 'lunacolors'
@@ -46,7 +47,7 @@ end
 
 function hilbish.messages.read(idx)
 	local msg = M._messages[idx]
-	if msg then
+	if msg then 
 		M._messages[idx].read = true
 		unread = unread - 1
 	end

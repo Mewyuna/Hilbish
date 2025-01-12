@@ -8,7 +8,7 @@ menu:
 ---
 
 <hr>
-<div id='setOld'>			
+<div id='setOld'>
 <h4 class='heading'>
 dirs.setOld(d)
 <a href="#setOld" class='heading-link'>
@@ -22,7 +22,7 @@ Sets the old directory string.
 </div>
 
 <hr>
-<div id='push'>			
+<div id='push'>
 <h4 class='heading'>
 dirs.push()
 <a href="#push" class='heading-link'>
@@ -36,7 +36,7 @@ This function has no parameters.
 </div>
 
 <hr>
-<div id='peak'>			
+<div id='peak'>
 <h4 class='heading'>
 dirs.peak(num)
 <a href="#peak" class='heading-link'>
@@ -50,7 +50,7 @@ Look at `num` amount of recent directories, starting from the latest.
 </div>
 
 <hr>
-<div id='pop'>			
+<div id='pop'>
 <h4 class='heading'>
 dirs.pop(num)
 <a href="#pop" class='heading-link'>
@@ -64,7 +64,7 @@ Remove the specified amount of dirs from the recent directories list.
 </div>
 
 <hr>
-<div id='recent'>			
+<div id='recent'>
 <h4 class='heading'>
 dirs.recent(idx)
 <a href="#recent" class='heading-link'>
