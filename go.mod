@@ -10,10 +10,11 @@ require (
 	github.com/blackfireio/osinfo v1.0.5
 	github.com/maxlandon/readline v1.0.14
 	github.com/pborman/getopt v1.1.0
+	github.com/rjeczalik/notify v0.9.3
 	github.com/sahilm/fuzzy v0.1.1
 	golang.org/x/sys v0.22.0
 	golang.org/x/term v0.22.0
-	mvdan.cc/sh/v3 v3.8.0
+	mvdan.cc/sh/v3 v3.0.0-00010101000000-000000000000
 )
 
 require (

@@ -22,6 +22,7 @@ import (
 	"mvdan.cc/sh/v3/interp"
 )
 
+var watcherMetaKey = rt.StringValue("hshwatcher")
 type fs struct{
 	runner *interp.Runner
 	Loader packagelib.Loader
@@ -40,6 +41,30 @@ func New(runner *interp.Runner) *fs {
 }
 
 func (f *fs) loaderFunc(rtm *rt.Runtime) (rt.Value, func()) {
+	watcherMethods := rt.NewTable()
+	watcherFuncs := map[string]util.LuaExport{
+		"start": {watcherStart, 1, false},
+		"stop": {watcherStop, 1, false},
+	}
+	util.SetExports(rtm, watcherMethods, watcherFuncs)
+
+	watcherMeta := rt.NewTable()
+	watcherIndex := func(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
+		//ti, _ := watcherArg(c, 0)
+
+		arg := c.Arg(1)
+		val := watcherMethods.Get(arg)
+
+		if val != rt.NilValue {
+			return c.PushingNext1(t.Runtime, val), nil
+		}
+
+		return c.PushingNext1(t.Runtime, val), nil
+	}
+
+	watcherMeta.Set(rt.StringValue("__index"), rt.FunctionValue(rt.NewGoFunction(watcherIndex, "__index", 2, false)))
+	rtm.SetRegistry(watcherMetaKey, rt.TableValue(watcherMeta))
+
 	exports := map[string]util.LuaExport{
 		"cd": util.LuaExport{f.fcd, 1, false},
 		"mkdir": util.LuaExport{f.fmkdir, 2, false},
@@ -51,6 +76,7 @@ func (f *fs) loaderFunc(rtm *rt.Runtime) (rt.Value, func()) {
 		"glob": util.LuaExport{f.fglob, 1, false},
 		"join": util.LuaExport{f.fjoin, 0, true},
 		"pipe": util.LuaExport{f.fpipe, 0, false},
+		"watch": util.LuaExport{fwatch, 2, false},
 	}
 	mod := rt.NewTable()
 	util.SetExports(rtm, mod, exports)
@@ -334,3 +360,28 @@ func (f *fs) fstat(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
 	return c.PushingNext1(t.Runtime, rt.TableValue(statTbl)), nil
 }
 
+// watch(path, callback)
+// Watches a path for changes made to it. For example, to monitor
+// new files created in a folder.
+// The callback passed 2 string arguments, the `event` and the absolute `path`
+// #param path string
+// #param callback function
+func fwatch(t *rt.Thread, c *rt.GoCont) (rt.Cont, error) {
+	if err := c.CheckNArgs(2); err != nil {
+		return nil, err
+	}
+
+	dir, err := c.StringArg(0)
+	if err != nil {
+		return nil, err
+	}
+
+	watcher, err := c.ClosureArg(1)
+	if err != nil {
+		return nil, err
+	}
+
+	dw := newWatcher(dir, watcher, t.Runtime)
+
+	return c.PushingNext1(t.Runtime, rt.UserDataValue(dw.ud)), nil
+}
